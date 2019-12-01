@@ -39,7 +39,7 @@ class myxl(object):
 
     def log_replace(self, value):
         terminal_columns = os.get_terminal_size()[0]
-        value = 'from {} to {} - {}% - {}'.format(self.package_queue_done, self.package_queue_total, self.package_queue_done % self.package_queue_total, value)
+        value = 'from {} to {} - {}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
         value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
 
         with lock:
