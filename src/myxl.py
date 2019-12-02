@@ -12,16 +12,22 @@ lock = threading.RLock()
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 class myxl(object):
+    loop = True
+    imei = '3571250436519001'
+    imsi = '510110032177230'
     msisdn = ''
     session_id = ''
 
     package_queue = queue.Queue()
     package_queue_done = 0
-    package_queue_total = 0
+    package_queue_total = 1
+
+    def stop(self):
+        self.loop = False
 
     def input_value(self, value, min_length=0):
         try:
-            while True:
+            while self.loop:
                 result = str(input(value)).strip()
                 if (not result and min_length > 0) or (len(result) < min_length):
                     continue
@@ -34,36 +40,55 @@ class myxl(object):
 
     def log(self, value):
         with lock:
+            if not self.loop:
+                return
             sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\n')
             sys.stdout.flush()
 
     def log_replace(self, value):
         terminal_columns = os.get_terminal_size()[0]
-        value = 'from {} to {} - {}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
+        value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
         value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
 
         with lock:
+            if not self.loop:
+                return
             sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\r')
             sys.stdout.flush()
 
-    def sleep(self, interval):
-        while interval:
-            self.log_replace(f"Resumming in {interval} seconds")
+    def sleep(self, interval, value=''):
+        while interval and self.loop:
+            self.log_replace('{:0>3} - {}'.format(interval, value))
             interval = interval - 1
             time.sleep(1)
+
+        self.log_replace('{:0>3} - {}'.format(interval, value))
 
     def request(self, method, target, headers={}, **args):
         headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0'
 
         while True:
             try:
+                self.log_replace(f"Req - {target}")
                 response = requests.request(method, target, **args)
-            except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout) as exception:
-                self.log(f"Exception:\n\n|   {exception} \n|   Sleeping 10 seconds... \n|\n")
-                time.sleep(10)
+            except requests.exceptions.ConnectionError:
+                self.sleep(15, '(Connection Error)')
+            except requests.exceptions.ReadTimeout:
+                self.sleep(10, '(Read Timeout)')
             else: break
 
         return response
+
+    def request_response_decode(self, text):
+        try:
+            data = {}
+            data = json.loads(text)
+        except json.decoder.JSONDecodeError:
+            self.stop()
+            sys.stdout.write('\r' + '\033[K' + '\033[31;1m' + 'JSON Decode Error \033[0m \n' + '\033[1m' + f"  {text} \033[0m \n" + '  Ctrl-C if not exiting automaticly \n  Please wait... \n\n')
+            sys.stdout.flush()
+
+        return data
 
     def request_id(self):
         return datetime.datetime.now().strftime('%Y%m%d%H%M%S')
@@ -71,9 +96,10 @@ class myxl(object):
     def request_date(self):
         return datetime.datetime.now().strftime('%Y%m%d')
 
+    def transaction_id(self):
+        return str(random.randint(100000000000, 999999999999))
+
     def is_signed_in(self):
-        msisdn = self.msisdn
-        session_id = self.session_id
         request_id = self.request_id()
 
         host = 'my.xl.co.id'
@@ -89,10 +115,10 @@ class myxl(object):
                         "requestId": request_id,
                         "channel": "MYXLPRE"
                     },
-                    "msisdn": msisdn,
+                    "msisdn": self.msisdn,
                 }
             },
-            "sessionId": session_id,
+            "sessionId": self.session_id,
             "platform": "04",
             "appVersion": "3.8.2",
             "sourceName": "Firefox",
@@ -113,12 +139,12 @@ class myxl(object):
         }
 
         response = self.request('POST', f"https://{host}/pre/opGetSubscriberProfileRq", headers=headers, json=content, timeout=30, verify=False)
-        response = json.loads(response.text)
+        response = self.request_response_decode(response.text)
 
         if 'opGetSubscriberProfileRs' in response:
             data = response['opGetSubscriberProfileRs']
 
-            value = '{}{}{} ({})\n'.format(
+            value = '\033[1m{}{}{} ({}) \033[0m \n'.format(
                 f"{data['profile']['firstName']}",
                 f" {data['profile']['middleName']}" if data['profile']['middleName'] else '',
                 f" {data['profile']['lastName']}" if data['profile']['lastName'] else '',
@@ -133,7 +159,7 @@ class myxl(object):
         return False
 
     def request_otp(self, msisdn):
-        while True:
+        while self.loop:
             request_id = self.request_id()
 
             host = 'myxl.co.id'
@@ -168,23 +194,23 @@ class myxl(object):
                 "DNT": "1",
             }
 
-            response = requests.request('POST', f"https://{host}/pre/LoginSendOTPRq", headers=headers, json=content, timeout=30, verify=False)
-            response = json.loads(response.text)
+            response = self.request('POST', f"https://{host}/pre/LoginSendOTPRq", headers=headers, json=content, timeout=30, verify=False)
+            response = self.request_response_decode(response.text)
 
             if response.get('LoginSendOTPRs', {}).get('headerRs', {}).get('responseCode', '') == '00':
                 return True
 
-            self.log(response)
+            self.log(f"{response} \n")
 
     def signin(self, msisdn, account_file):
-        while True:
+        while self.loop:
             if not msisdn or not msisdn.startswith('628'):
                 msisdn = self.input_value('MSISDN (e.g. 628xx) \n', min_length=12)
 
             if self.request_otp(msisdn):
                 break
 
-        while True:
+        while self.loop:
             otp = self.input_value('One Time Password (OTP) [blank for cancel] \n').upper()
 
             if not otp:
@@ -219,7 +245,7 @@ class myxl(object):
             }
 
             response = self.request('POST', f"https://{host}/pre/LoginValidateOTPRq", json=content, timeout=30)
-            response = json.loads(response.text)
+            response = self.request_response_decode(response.text)
 
             if response.get('LoginValidateOTPRs', {}).get('responseCode', '') == '00':
                 with open(account_file, 'w', encoding='UTF-8') as file:
@@ -230,21 +256,17 @@ class myxl(object):
 
                 return True
 
-            elif response.get('LoginValidateOTPRs', {}).get('responseCode', '') == '01':
-                self.log('Invalid Otp!')
-
-            self.log(response)
+            self.log(f"{response} \n")
 
     def signout(self, account_file):
         if os.path.exists(account_file):
             os.remove(account_file)
 
-    def get_package_info(self, service_id):
-        msisdn = self.msisdn
-        session_id = self.session_id
+    def get_package_info(self, data):
+        service_id = data['service_id']
+        subscriber_number = data['subscriber_number']
 
-        service_id = str(service_id)
-        request_id = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+        request_id = self.request_id()
 
         host = 'my.xl.co.id'
         content = {
@@ -257,8 +279,8 @@ class myxl(object):
             "sourceName": "Others",
             "msisdn_Type": "P",
             "screenName": "home.packages",
-            "sessionId": session_id,
-            "msisdn": msisdn,
+            "sessionId": self.session_id,
+            "msisdn": self.msisdn,
         }
         headers = {
             'Host': host,
@@ -277,15 +299,15 @@ class myxl(object):
         }
 
         response = self.request('POST', f"https://{host}/pre/CMS", headers=headers, json=content, timeout=30, verify=False)
-        response = json.loads(response.text)
+        response = self.request_response_decode(response.text)
 
         if service_id in response:
-            value = f"{response[service_id]['package_info']['service_name']} ({service_id})" + '\n'
-            for info in response[service_id]['package_info']['benefit_info']:    
+            value = '\033[1m' + f"{response[service_id]['package_info']['service_name']} ({service_id}) ({subscriber_number})" + '\033[0m' + '\n'
+            for info in response[service_id]['package_info']['benefit_info']:
                 value += f"  {info['package_benefits_name']}"
                 value += f" ({info['package_benefit_type']})"
-                value += f" ({info['package_benefit_quota']} {info['package_benefit_unit']})" if info['package_benefit_quota'] or info['package_benefit_unit'] else ''
-                value += f" \n"
+                value += ' ({}{})'.format(f"{info['package_benefit_quota']} " if info['package_benefit_quota'] else '', info['package_benefit_unit'])
+                value += ' \n'
 
             self.log(value)
 
@@ -294,14 +316,9 @@ class myxl(object):
 
 
     def buy_package(self, data):
-        while True:
-            msisdn = self.msisdn
-            session_id = self.session_id
-
-            imsi = '510110032177230'
-            imei = '3571250436519001'
-            trans_id = str(random.randint(100000000000, 999999999999))
-            request_id = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+        while self.loop:
+            request_id = self.request_id()
+            transaction_id = self.transaction_id()
 
             service_id = str(data['service_id'])
             subscriber_number = str(data['subscriber_number'])
@@ -315,33 +332,33 @@ class myxl(object):
                         "applicationSubID": "1",
                         "touchpoint": "MYXL",
                         "requestID": request_id,
-                        "msisdn": msisdn,
+                        "msisdn": self.msisdn,
                         "serviceID": service_id,
                     },
                     "opPurchase": {
-                        "msisdn": msisdn,
+                        "msisdn": self.msisdn,
                         "serviceid": service_id,
                     },
                     "XBOXRequest": {
                         "requestName": "GetSubscriberMenuId",
                         "Subscriber_Number": subscriber_number,
                         "Source": "mapps",
-                        "Trans_ID": trans_id,
+                        "Trans_ID": transaction_id,
                         "Home_POC": "JK0",
                         "PRICE_PLAN": "513738114",
                         "PayCat": "PRE-PAID",
                         "Active_End": "20190704",
                         "Grace_End": "20190803",
                         "Rembal": "0",
-                        "IMSI": imsi,
-                        "IMEI": imei,
+                        "IMSI": self.imsi,
+                        "IMEI": self.imei,
                         "Shortcode": "mapps"
                     },
                     "Header": {
                         "ReqID": request_id,
                     }
                 },
-                "sessionId": session_id,
+                "sessionId": self.session_id,
                 "serviceId": service_id,
                 "packageRegUnreg": "Reg",
                 "packageAmt": "11.900",
@@ -365,35 +382,34 @@ class myxl(object):
             }
 
             response = self.request('POST', f'https://{host}/pre/opPurchase', headers=headers, json=content, timeout=30, verify=False)
-            response = json.loads(response.text)
+            response = self.request_response_decode(response.text)
 
             status = response.get('SOAP-ENV:Envelope', {}).get('SOAP-ENV:Body', [{}])[0].get('ns0:opPurchaseRs', [{}])[0].get('ns0:Status', [''])[0]
 
             if status == 'IN PROGRESS':
-                self.get_package_info(service_id)
+                self.get_package_info(data)
 
             elif status == 'DUPLICATE':
-                self.log(f"Duplicate ({service_id}) ({subscriber_number}) \n  Sleeping 120 seconds... \n")
-                self.sleep(120)
+                self.log(f"\033[33;2mDuplicate ({service_id}) ({subscriber_number}) \033[0m \n  Sleeping 120 seconds... \n")
+                self.sleep(120, f"({service_id}) ({subscriber_number})")
                 continue
 
             elif response.get('responseCode') == '04':
                 pass
 
             else:
-                self.log(f"{service_id:.<12} {response}")
-
+                self.log(f"{service_id:.<12} {response} \n")
 
             self.package_queue_done += 1
             break
 
     def buy_packages(self, service_id_range, subscriber_number_range, threads=32):
         def task():
-            while True:
+            while self.loop:
                 data = self.package_queue.get()
-                self.log_replace(f"Sending {data['service_id']} ({data['subscriber_number']})")
+                self.log_replace(f"Snd - {data['service_id']} ({data['subscriber_number']})")
                 self.buy_package(data)
-                self.log_replace(f"Sending {data['service_id']} ({data['subscriber_number']})")
+                self.log_replace(f"Snd - {data['service_id']} ({data['subscriber_number']})")
                 self.package_queue.task_done()
 
         for subscriber_number in range(int(subscriber_number_range[0]), int(subscriber_number_range[1]) + 1):
