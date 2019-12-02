@@ -25,10 +25,30 @@ class myxl(object):
     def stop(self):
         self.loop = False
 
+    def realpath(self, file):
+        return os.path.dirname(os.path.abspath(__file__)) + file
+
+    def save_file(self, filename, value):
+        with lock:
+            if not self.loop:
+                return
+            with open(filename, 'a+') as file:
+                file.write(str(value) + '\n')
+
+    def update_file(self, filename):
+        with lock:
+            lines = open(filename).readlines()
+            lines = list(set([x.strip() for x in lines if x]))
+            lines.sort()
+
+            with open(filename, 'w') as file:
+                for line in lines:
+                    file.write(str(line) + '\n')
+
     def input_value(self, value, min_length=0):
         try:
             while self.loop:
-                result = str(input(value)).strip()
+                result = str(input('\033[K' + str(value))).strip()
                 if (not result and min_length > 0) or (len(result) < min_length):
                     continue
                 if result != '':
@@ -70,7 +90,7 @@ class myxl(object):
         while True:
             try:
                 self.log_replace(f"Req - {target}")
-                response = requests.request(method, target, **args)
+                response = requests.request(method, target, headers=headers, **args)
             except requests.exceptions.ConnectionError:
                 self.sleep(15, f"{target} (Connection Error)")
             except requests.exceptions.ReadTimeout:
@@ -84,7 +104,7 @@ class myxl(object):
             data = {}
             data = json.loads(text)
         except json.decoder.JSONDecodeError:
-            sys.stdout.write('\r' + '\033[K' + '\033[31;1m' + 'JSON Decode Error \033[0m \n' + '\033[1m' + f"  {text} \033[0m \n\n")
+            sys.stdout.write('\r' + '\033[K' + '\033[31;1m' + 'JSON Decode Error \033[0m \n' + f"  {text} \033[0m \n\n")
             sys.stdout.flush()
 
         return data
@@ -133,8 +153,8 @@ class myxl(object):
             'Content-Length': str(len(str(content))),
             'Accept-Language': 'en-US,id;q=0.5',
             'Accept-Encoding': 'gzip, deflate, br',
-            'Access-Control-Allow-Origin': True,
-            'DNT': 1,
+            'Access-Control-Allow-Origin': 'True',
+            'DNT': '1',
         }
 
         response = self.request('POST', f"https://{host}/pre/opGetSubscriberProfileRq", headers=headers, json=content, timeout=30, verify=False)
@@ -179,7 +199,6 @@ class myxl(object):
                 "sourceName": "Firefox",
                 "screenName": "login.enterLoginNumber",
             }
-
             headers = {
                 "Host": host,
                 "Accept": "application/json, text/plain, */*",
@@ -189,7 +208,7 @@ class myxl(object):
                 "Content-Length": str(len(str(content))),
                 "Accept-Language": "en-US,id;q=0.5",
                 "Accept-Encoding": "gzip, deflate, br",
-                "Access-Control-Allow-Origin": 'true',
+                "Access-Control-Allow-Origin": 'True',
                 "DNT": "1",
             }
 
@@ -293,14 +312,21 @@ class myxl(object):
             'Sec-Fetch-Site': 'same-origin',
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'en,id;q=0.9',
-            'Access-Control-Allow-Origin': True,
-            'DNT': 1,
+            'Access-Control-Allow-Origin': 'True',
+            'DNT': '1',
         }
 
         response = self.request('POST', f"https://{host}/pre/CMS", headers=headers, json=content, timeout=30, verify=False)
         response = self.request_response_decode(response.text)
 
         if service_id in response:
+
+            del response['gaUser']
+            del response['sessionId']
+            del response['timeStamp']
+
+            self.save_file(self.realpath('/../storage/service_id_info.txt'), json.dumps(response))
+
             value = '\033[1m' + f"{response[service_id]['package_info']['service_name']} ({service_id}) ({subscriber_number})" + '\033[0m' + '\n'
             for info in response[service_id]['package_info']['benefit_info']:
                 value += f"  {info['package_benefits_name']}"
@@ -376,14 +402,18 @@ class myxl(object):
                 'Content-Length': str(len(str(content))),
                 'Accept-Language': 'en-US,id;q=0.5',
                 'Accept-Encoding': 'gzip, deflate, br',
-                'Access-Control-Allow-Origin': True,
-                'DNT': 1,
+                'Access-Control-Allow-Origin': 'True',
+                'DNT': '1',
             }
 
             response = self.request('POST', f'https://{host}/pre/opPurchase', headers=headers, json=content, timeout=30, verify=False)
             response = self.request_response_decode(response.text)
 
             status = response.get('SOAP-ENV:Envelope', {}).get('SOAP-ENV:Body', [{}])[0].get('ns0:opPurchaseRs', [{}])[0].get('ns0:Status', [''])[0]
+
+            if status in ['IN PROGRESS', 'DUPLICATE']:
+                self.save_file(self.realpath('/../storage/service_id.txt'), data['service_id'])
+                self.save_file(self.realpath('/../storage/subscriber_number.txt'), data['subscriber_number'])
 
             if status == 'IN PROGRESS':
                 self.get_package_info(data)

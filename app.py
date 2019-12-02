@@ -57,6 +57,10 @@ def main():
         myxl.stop()
         sys.stdout.write('\r' + '\033[K' + '\033[31;1m' + 'Keyboard Interrupted \n' + '\033[0m' + '  Ctrl-C again if not exiting automaticly \n  Please wait... \n\n')
         sys.stdout.flush()
+    finally:
+        myxl.update_file(realpath('/storage/service_id.txt'))
+        myxl.update_file(realpath('/storage/service_id_info.txt'))
+        myxl.update_file(realpath('/storage/subscriber_number.txt'))
 
 if __name__ == '__main__':
     main()
