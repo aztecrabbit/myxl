@@ -41,7 +41,9 @@ class myxl(object):
 
         with lock:
             lines = open(filename).readlines()
-            lines = list(set([x.strip() for x in lines if x]))
+            lines = [x.strip() for x in lines if x]
+            lines = [x.strip() for x in lines if x]
+            lines = list(set(lines))
             lines.sort()
 
             with open(filename, 'w') as file:
