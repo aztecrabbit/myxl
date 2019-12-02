@@ -36,6 +36,9 @@ class myxl(object):
                 file.write(str(value) + '\n')
 
     def update_file(self, filename):
+        if not os.path.exists(filename):
+            return
+
         with lock:
             lines = open(filename).readlines()
             lines = list(set([x.strip() for x in lines if x]))
