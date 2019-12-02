@@ -72,9 +72,9 @@ class myxl(object):
                 self.log_replace(f"Req - {target}")
                 response = requests.request(method, target, **args)
             except requests.exceptions.ConnectionError:
-                self.sleep(15, '(Connection Error)')
+                self.sleep(15, f"{target} (Connection Error)")
             except requests.exceptions.ReadTimeout:
-                self.sleep(10, '(Read Timeout)')
+                self.sleep(10, f"{target} (Read Timeout)")
             else: break
 
         return response
@@ -84,8 +84,7 @@ class myxl(object):
             data = {}
             data = json.loads(text)
         except json.decoder.JSONDecodeError:
-            self.stop()
-            sys.stdout.write('\r' + '\033[K' + '\033[31;1m' + 'JSON Decode Error \033[0m \n' + '\033[1m' + f"  {text} \033[0m \n" + '  Ctrl-C if not exiting automaticly \n  Please wait... \n\n')
+            sys.stdout.write('\r' + '\033[K' + '\033[31;1m' + 'JSON Decode Error \033[0m \n' + '\033[1m' + f"  {text} \033[0m \n\n")
             sys.stdout.flush()
 
         return data
@@ -256,7 +255,7 @@ class myxl(object):
 
                 return True
 
-            self.log(f"{response} \n")
+            self.log(f"Response Error ({msisdn}) \n  {response} \n")
 
     def signout(self, account_file):
         if os.path.exists(account_file):
@@ -312,7 +311,7 @@ class myxl(object):
             self.log(value)
 
         else:
-            self.log(response)
+            self.log(f"Response Error ({service_id}) ({subscriber_number}) \n  {response} \n")
 
 
     def buy_package(self, data):
@@ -390,15 +389,13 @@ class myxl(object):
                 self.get_package_info(data)
 
             elif status == 'DUPLICATE':
-                self.log(f"\033[33;2mDuplicate ({service_id}) ({subscriber_number}) \033[0m \n  Sleeping 120 seconds... \n")
-                self.sleep(120, f"({service_id}) ({subscriber_number})")
-                continue
+                self.log(f"\033[33;2mDuplicate ({service_id}) ({subscriber_number}) \033[0m \n  Request to this package stopped \n")
 
             elif response.get('responseCode') == '04':
                 pass
 
             else:
-                self.log(f"{service_id:.<12} {response} \n")
+                self.log(f"Response Error ({service_id}) ({subscriber_number}) \n  {response} \n")
 
             self.package_queue_done += 1
             break
@@ -407,9 +404,8 @@ class myxl(object):
         def task():
             while self.loop:
                 data = self.package_queue.get()
-                self.log_replace(f"Snd - {data['service_id']} ({data['subscriber_number']})")
                 self.buy_package(data)
-                self.log_replace(f"Snd - {data['service_id']} ({data['subscriber_number']})")
+                self.log_replace(f"Rcv - {data['service_id']} ({data['subscriber_number']})")
                 self.package_queue.task_done()
 
         for subscriber_number in range(int(subscriber_number_range[0]), int(subscriber_number_range[1]) + 1):
