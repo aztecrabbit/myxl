@@ -72,10 +72,15 @@ class myxl(object):
             sys.stdout.flush()
 
     def log_replace(self, value):
+        if self.silent:
+            return
+
         with lock:
-            terminal_columns = os.get_terminal_size()[0]
-            value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
-            value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
+            try:
+                terminal_columns = os.get_terminal_size()[0]
+                value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
+                value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
+            except OSError: pass
 
             if not self.loop:
                 return
@@ -84,11 +89,6 @@ class myxl(object):
             sys.stdout.flush()
 
     def sleep(self, interval, value=''):
-        if self.silent:
-            self.log_replace('Err - {}'.format(value))
-            time.sleep(interval)
-            return
-
         while interval and self.loop:
             self.log_replace('{:0>3} - {}'.format(interval, value))
             interval = interval - 1
