@@ -97,7 +97,7 @@ class myxl(object):
                 self.log_replace(f"Req - {target}")
                 response = requests.request(method, target, headers=headers, **args)
             except requests.exceptions.ConnectionError:
-                self.sleep(15, f"{target} (Connection Error)")
+                self.sleep(10, f"{target} (Connection Error)")
             except requests.exceptions.ReadTimeout:
                 self.sleep(10, f"{target} (Read Timeout)")
             else: break
@@ -435,7 +435,7 @@ class myxl(object):
             self.package_queue_done += 1
             break
 
-    def buy_packages(self, service_id_range, subscriber_number_range, threads=32):
+    def buy_packages(self, service_id_list, subscriber_number_list, threads):
         def task():
             while self.loop:
                 data = self.package_queue.get()
@@ -443,11 +443,11 @@ class myxl(object):
                 self.log_replace(f"Rcv - {data['service_id']} ({data['subscriber_number']})")
                 self.package_queue.task_done()
 
-        for subscriber_number in range(int(subscriber_number_range[0]), int(subscriber_number_range[1]) + 1):
-            for service_id in range(int(service_id_range[0]), int(service_id_range[1]) + 1):
+        for subscriber_number in subscriber_number_list:
+            for service_id in service_id_list:
                 self.package_queue.put({
                     'service_id': str(service_id),
-                    'subscriber_number': str(subscriber_number) + '00',
+                    'subscriber_number': str(subscriber_number),
                 })
 
         self.package_queue_total = self.package_queue.qsize()

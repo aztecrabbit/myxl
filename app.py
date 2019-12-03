@@ -13,6 +13,7 @@ def main():
     parser.add_argument('--signin', help='--signin 628xx', dest='msisdn', type=str)
     parser.add_argument('--buy', help='--buy 8210000-8219999', dest='service_id_range', type=str)
     parser.add_argument('--sub', help='--sub 20647200-20647299', dest='subscriber_number_range', type=str)
+    parser.add_argument('--sub-file', help='--sub-file', dest='subscriber_number_file', action='store_true')
     parser.add_argument('--threads', help='--threads 32', dest='threads', type=int)
     parser.add_argument('--signout', help='--signout', dest='signout', action='store_true')
 
@@ -51,7 +52,26 @@ def main():
             subscriber_number_range.append(arguments.subscriber_number_range[0])
             subscriber_number_range.append(arguments.subscriber_number_range[1] if len(arguments.subscriber_number_range) >= 2 and int(arguments.subscriber_number_range[1]) >= int(arguments.subscriber_number_range[0]) else subscriber_number_range[0])
 
-            myxl.buy_packages(service_id_range, subscriber_number_range, threads=arguments.threads)
+            service_id_list = []
+            subscriber_number_list = []
+
+            for service_id in range(int(service_id_range[0]), int(service_id_range[1]) + 1):
+                service_id_list.append(str(service_id))
+
+            for subscriber_number in range(int(subscriber_number_range[0]), int(subscriber_number_range[1]) + 1):
+                subscriber_number_list.append(str(subscriber_number)  + '00')
+
+            if arguments.subscriber_number_file:
+                if os.path.exists(realpath('/storage/subscriber_number.txt')):
+                    subscriber_number_list = open(realpath('/storage/subscriber_number.txt')).readlines()
+                    subscriber_number_list = [x.strip() for x in subscriber_number_list if x]
+                    subscriber_number_list = [x.strip() for x in subscriber_number_list if x]
+                    subscriber_number_list.sort()
+
+                else:
+                    myxl.log(f"File {realpath('/storage/subscriber_number.txt')} not exists, using default subscriber number")
+
+            myxl.buy_packages(service_id_list, subscriber_number_list, threads=arguments.threads)
 
     except KeyboardInterrupt:
         myxl.stop()
