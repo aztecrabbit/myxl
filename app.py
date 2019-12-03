@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--sub', help='--sub 20647200-20647299', dest='subscriber_number_range', type=str)
     parser.add_argument('--sub-file', help='--sub-file', dest='subscriber_number_file', action='store_true')
     parser.add_argument('--threads', help='--threads 32', dest='threads', type=int)
+    parser.add_argument('--silent', help='--silent', dest='silent', action='store_true')
     parser.add_argument('--signout', help='--signout', dest='signout', action='store_true')
 
     arguments = parser.parse_args()
@@ -30,6 +31,7 @@ def main():
         account = json.loads(open(realpath('/account.json')).read())
 
         myxl = src.myxl()
+        myxl.silent = arguments.silent
         myxl.msisdn = account['msisdn']
         myxl.session_id = account['session_id']
 

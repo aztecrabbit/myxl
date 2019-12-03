@@ -18,6 +18,7 @@ class myxl(object):
     msisdn = ''
     session_id = ''
 
+    silent = False
     package_queue = queue.Queue()
     package_queue_done = 0
     package_queue_total = 1
@@ -83,6 +84,11 @@ class myxl(object):
             sys.stdout.flush()
 
     def sleep(self, interval, value=''):
+        if self.silent:
+            self.log_replace('Err - {}'.format(value))
+            time.sleep(interval)
+            return
+
         while interval and self.loop:
             self.log_replace('{:0>3} - {}'.format(interval, value))
             interval = interval - 1

@@ -2,6 +2,7 @@
 
 storage/*
 
+*.swp
 account.json
 
 !.gitkeep
