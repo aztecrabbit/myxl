@@ -83,6 +83,7 @@ def main():
         myxl.update_file(realpath('/storage/service_id.txt'))
         myxl.update_file(realpath('/storage/service_id_info.txt'))
         myxl.update_file(realpath('/storage/subscriber_number.txt'))
+        myxl.log()
 
 if __name__ == '__main__':
     main()

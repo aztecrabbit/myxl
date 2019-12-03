@@ -64,7 +64,7 @@ class myxl(object):
         except KeyboardInterrupt:
             sys.exit()
 
-    def log(self, value):
+    def log(self, value=''):
         with lock:
             if not self.loop:
                 return
@@ -72,15 +72,14 @@ class myxl(object):
             sys.stdout.flush()
 
     def log_replace(self, value):
-        if self.silent:
-            return
-
         with lock:
             try:
                 terminal_columns = os.get_terminal_size()[0]
-                value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
-                value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
-            except OSError: pass
+            except OSError:
+                terminal_columns = 512
+
+            value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
+            value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
 
             if not self.loop:
                 return
@@ -89,6 +88,10 @@ class myxl(object):
             sys.stdout.flush()
 
     def sleep(self, interval, value=''):
+        if self.silent:
+            time.sleep(interval)
+            return
+
         while interval and self.loop:
             self.log_replace('{:0>3} - {}'.format(interval, value))
             interval = interval - 1
@@ -100,8 +103,10 @@ class myxl(object):
         headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0'
 
         while True:
-            try:
+            if not self.silent:
                 self.log_replace(f"Req - {target}")
+
+            try:
                 response = requests.request(method, target, headers=headers, timeout=30, verify=False, **args)
             except requests.exceptions.ConnectionError:
                 self.sleep(10, f"{target} (Connection Error)")
