@@ -71,13 +71,14 @@ class myxl(object):
             sys.stdout.flush()
 
     def log_replace(self, value):
-        terminal_columns = os.get_terminal_size()[0]
-        value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
-        value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
-
         with lock:
+            terminal_columns = os.get_terminal_size()[0]
+            value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
+            value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
+
             if not self.loop:
                 return
+
             sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\r')
             sys.stdout.flush()
 
@@ -95,7 +96,7 @@ class myxl(object):
         while True:
             try:
                 self.log_replace(f"Req - {target}")
-                response = requests.request(method, target, headers=headers, **args)
+                response = requests.request(method, target, headers=headers, timeout=30, verify=False, **args)
             except requests.exceptions.ConnectionError:
                 self.sleep(10, f"{target} (Connection Error)")
             except requests.exceptions.ReadTimeout:
@@ -162,7 +163,7 @@ class myxl(object):
             'DNT': '1',
         }
 
-        response = self.request('POST', f"https://{host}/pre/opGetSubscriberProfileRq", headers=headers, json=content, timeout=30, verify=False)
+        response = self.request('POST', f"https://{host}/pre/opGetSubscriberProfileRq", headers=headers, json=content)
         response = self.request_response_decode(response.text)
 
         if 'opGetSubscriberProfileRs' in response:
@@ -217,7 +218,7 @@ class myxl(object):
                 "DNT": "1",
             }
 
-            response = self.request('POST', f"https://{host}/pre/LoginSendOTPRq", headers=headers, json=content, timeout=30, verify=False)
+            response = self.request('POST', f"https://{host}/pre/LoginSendOTPRq", headers=headers, json=content)
             response = self.request_response_decode(response.text)
 
             if response.get('LoginSendOTPRs', {}).get('headerRs', {}).get('responseCode', '') == '00':
@@ -267,7 +268,7 @@ class myxl(object):
                 "screenName": "login.enterLoginOTP",
             }
 
-            response = self.request('POST', f"https://{host}/pre/LoginValidateOTPRq", json=content, timeout=30)
+            response = self.request('POST', f"https://{host}/pre/LoginValidateOTPRq", json=content)
             response = self.request_response_decode(response.text)
 
             if response.get('LoginValidateOTPRs', {}).get('responseCode', '') == '00':
@@ -321,7 +322,7 @@ class myxl(object):
             'DNT': '1',
         }
 
-        response = self.request('POST', f"https://{host}/pre/CMS", headers=headers, json=content, timeout=30, verify=False)
+        response = self.request('POST', f"https://{host}/pre/CMS", headers=headers, json=content)
         response = self.request_response_decode(response.text)
 
         if service_id in response:
@@ -411,7 +412,7 @@ class myxl(object):
                 'DNT': '1',
             }
 
-            response = self.request('POST', f'https://{host}/pre/opPurchase', headers=headers, json=content, timeout=30, verify=False)
+            response = self.request('POST', f'https://{host}/pre/opPurchase', headers=headers, json=content)
             response = self.request_response_decode(response.text)
 
             status = response.get('SOAP-ENV:Envelope', {}).get('SOAP-ENV:Body', [{}])[0].get('ns0:opPurchaseRs', [{}])[0].get('ns0:Status', [''])[0]
