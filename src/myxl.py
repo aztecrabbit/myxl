@@ -84,34 +84,28 @@ class myxl(object):
             if not self.loop:
                 return
 
-            sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\r')
+            sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\n')
             sys.stdout.flush()
 
-    def sleep(self, interval, value=''):
-        if self.silent:
-            time.sleep(interval)
-            return
+    class responseClass(object):
+        text = '{}'
 
-        while interval and self.loop:
-            self.log_replace('{:0>3} - {}'.format(interval, value))
-            interval = interval - 1
-            time.sleep(1)
-
-        self.log_replace('{:0>3} - {}'.format(interval, value))
-
-    def request(self, method, target, headers={}, **args):
+    def request(self, method, target, headers={}, **kwargs):
         headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0'
+        response = self.responseClass()
 
-        while True:
+        while self.loop:
             if not self.silent:
                 self.log_replace(f"Req - {target}")
 
             try:
-                response = requests.request(method, target, headers=headers, timeout=30, verify=False, **args)
+                response = requests.request(method, target, headers=headers, timeout=(120, 180), verify=False, **kwargs)
             except requests.exceptions.ConnectionError:
-                self.sleep(10, f"{target} (Connection Error)")
+                if not self.silent:
+                    self.log_replace(f"Err - {target} (Connection Error)")
             except requests.exceptions.ReadTimeout:
-                self.sleep(10, f"{target} (Read Timeout)")
+                if not self.silent:
+                    self.log_replace(f"Err - {target} (Read Timeout)")
             else: break
 
         return response
