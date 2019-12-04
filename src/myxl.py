@@ -84,7 +84,7 @@ class myxl(object):
             if not self.loop:
                 return
 
-            sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\n')
+            sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\r')
             sys.stdout.flush()
 
     class responseClass(object):
