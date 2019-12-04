@@ -19,7 +19,7 @@ def main():
     parser.add_argument('--signout', help='--signout', dest='signout', action='store_true')
 
     arguments = parser.parse_args()
-    arguments.threads = arguments.threads if arguments.threads else 32
+    arguments.threads = arguments.threads if arguments.threads else 16
     arguments.service_id_range = arguments.service_id_range.split('-') if arguments.service_id_range else []
     arguments.subscriber_number_range = arguments.subscriber_number_range.split('-') if arguments.subscriber_number_range else [20647244]
 

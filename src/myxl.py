@@ -99,7 +99,7 @@ class myxl(object):
                 self.log_replace(f"Req - {target}")
 
             try:
-                response = requests.request(method, target, headers=headers, timeout=(120, 180), verify=False, **kwargs)
+                response = requests.request(method, target, headers=headers, timeout=(60, 180), verify=False, **kwargs)
             except requests.exceptions.ConnectionError:
                 if not self.silent:
                     self.log_replace(f"Err - {target} (Connection Error)")
