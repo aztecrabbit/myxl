@@ -66,8 +66,7 @@ def main():
             if arguments.subscriber_number_file:
                 if os.path.exists(realpath('/storage/subscriber_number.txt')):
                     subscriber_number_list = open(realpath('/storage/subscriber_number.txt')).readlines()
-                    subscriber_number_list = [x.strip() for x in subscriber_number_list if x]
-                    subscriber_number_list = [x.strip() for x in subscriber_number_list if x]
+                    subscriber_number_list = [x.strip() for x in subscriber_number_list if x.strip()]
                     subscriber_number_list.sort()
 
                 else:

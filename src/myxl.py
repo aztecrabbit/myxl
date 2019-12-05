@@ -42,9 +42,7 @@ class myxl(object):
 
         with lock:
             lines = open(filename).readlines()
-            lines = [x.strip() for x in lines if x]
-            lines = [x.strip() for x in lines if x]
-            lines = list(set(lines))
+            lines = list(set([x.strip() for x in lines if x.strip()]))
             lines.sort()
 
             with open(filename, 'w') as file:
@@ -64,11 +62,11 @@ class myxl(object):
         except KeyboardInterrupt:
             sys.exit()
 
-    def log(self, value=''):
+    def log(self, value='', color=''):
         with lock:
             if not self.loop:
                 return
-            sys.stdout.write('\033[K' + str(value) + '\033[0m' + '\n')
+            sys.stdout.write('\033[K' + color + str(value) + '\033[0m' + '\n')
             sys.stdout.flush()
 
     def log_replace(self, value):
@@ -78,7 +76,7 @@ class myxl(object):
             except OSError:
                 terminal_columns = 512
 
-            value = 'from {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
+            value = 'From {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
             value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
 
             if not self.loop:
@@ -99,7 +97,7 @@ class myxl(object):
                 self.log_replace(f"Req - {target}")
 
             try:
-                response = requests.request(method, target, headers=headers, timeout=(60, 180), verify=False, **kwargs)
+                response = requests.request(method, target, headers=headers, timeout=(30, 180), verify=False, **kwargs)
             except requests.exceptions.ConnectionError:
                 if not self.silent:
                     self.log_replace(f"Err - {target} (Connection Error)")
@@ -348,7 +346,7 @@ class myxl(object):
             self.log(value)
 
         else:
-            self.log(f"Response Error ({service_id}) ({subscriber_number}) \n  {response} \n")
+            self.log(f"Response Error ({service_id}) ({subscriber_number}) \033[0m \n  {response} \n", color='\033[31;1m')
 
 
     def buy_package(self, data):
@@ -398,7 +396,7 @@ class myxl(object):
                 "serviceId": service_id,
                 "packageRegUnreg": "Reg",
                 "packageAmt": "11.900",
-                "platform": "04",
+                "platform": "02",
                 "appVersion": "3.8.2",
                 "sourceName": "Firefox",
                 "msisdn_Type": "P",
@@ -430,13 +428,13 @@ class myxl(object):
                 self.get_package_info(data)
 
             elif status == 'DUPLICATE':
-                self.log(f"\033[33;2mDuplicate ({service_id}) ({subscriber_number}) \033[0m \n  Request to this package stopped \n")
+                self.log(f"Duplicate ({service_id}) ({subscriber_number}) \033[0m \n  Request to this package stopped \n", color='\033[33;2m')
 
             elif response.get('responseCode') == '04':
                 pass
 
             else:
-                self.log(f"Response Error ({service_id}) ({subscriber_number}) \n  {response} \n")
+                self.log(f"Response Error ({service_id}) ({subscriber_number}) \033[0m \n  {response} \n", color='\033[31;1m')
 
             self.package_queue_done += 1
             break
