@@ -19,9 +19,10 @@ class myxl(object):
     session_id = ''
 
     silent = False
+    verbose = False
     package_queue = queue.Queue()
     package_queue_done = 0
-    package_queue_total = 1
+    package_queue_total = 0
 
     def stop(self):
         self.loop = False
@@ -76,7 +77,7 @@ class myxl(object):
             except OSError:
                 terminal_columns = 512
 
-            value = 'From {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / self.package_queue_total) * 100, value)
+            value = 'From {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / (self.package_queue_total if self.package_queue_total else 1)) * 100, value)
             value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
 
             if not self.loop:
@@ -290,8 +291,9 @@ class myxl(object):
             os.remove(account_file)
 
     def get_package_info(self, data):
-        service_id = data['service_id']
-        subscriber_number = data['subscriber_number']
+        platform = str(data['platform'])
+        service_id = str(data['service_id'])
+        subscriber_number = str(data['subscriber_number'])
 
         request_id = self.request_id()
 
@@ -300,7 +302,7 @@ class myxl(object):
             "type": "icon",
             "param": service_id,
             "lang": "bahasa",
-            "platform": "04",
+            "platform": platform,
             "ReqID": request_id,
             "appVersion": "3.8.2",
             "sourceName": "Others",
@@ -335,8 +337,9 @@ class myxl(object):
             del response['timeStamp']
 
             self.save_file(self.realpath('/../storage/service_id_info.txt'), json.dumps(response))
+            self.save_file(self.realpath('/../storage/database.txt'), f"{data['service_id']} | {data['subscriber_number']} | {data['platform']} | {json.dumps(response)}")
 
-            value = '\033[1m' + f"{response[service_id]['package_info']['service_name']} ({service_id}) ({subscriber_number})" + '\033[0m' + '\n'
+            value = '\033[1m' + f"{response[service_id]['package_info']['service_name']} ({service_id}) ({subscriber_number}) ({platform})" + '\033[0m' + '\n'
             for info in response[service_id]['package_info']['benefit_info']:
                 value += f"  {info['package_benefits_name']}"
                 value += f" ({info['package_benefit_type']})"
@@ -346,7 +349,7 @@ class myxl(object):
             self.log(value)
 
         else:
-            self.log(f"Response Error ({service_id}) ({subscriber_number}) \033[0m \n  {response} \n", color='\033[31;1m')
+            self.log(f"Response Error ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response} \n", color='\033[31;1m')
 
 
     def buy_package(self, data):
@@ -354,6 +357,7 @@ class myxl(object):
             request_id = self.request_id()
             transaction_id = self.transaction_id()
 
+            platform = str(data['platform'])
             service_id = str(data['service_id'])
             subscriber_number = str(data['subscriber_number'])
 
@@ -396,7 +400,7 @@ class myxl(object):
                 "serviceId": service_id,
                 "packageRegUnreg": "Reg",
                 "packageAmt": "11.900",
-                "platform": "02",
+                "platform": platform,
                 "appVersion": "3.8.2",
                 "sourceName": "Firefox",
                 "msisdn_Type": "P",
@@ -428,18 +432,19 @@ class myxl(object):
                 self.get_package_info(data)
 
             elif status == 'DUPLICATE':
-                self.log(f"Duplicate ({service_id}) ({subscriber_number}) \033[0m \n  Request to this package stopped \n", color='\033[33;2m')
+                self.log(f"Duplicate ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  Request to this package stopped \n", color='\033[33;2m')
 
             elif response.get('responseCode') == '04':
-                pass
+                if self.verbose:
+                    self.log(f"Not Match ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response} \n", color='\033[31;1m')
 
             else:
-                self.log(f"Response Error ({service_id}) ({subscriber_number}) \033[0m \n  {response} \n", color='\033[31;1m')
+                self.log(f"Response Error ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response} \n", color='\033[31;1m')
 
             self.package_queue_done += 1
             break
 
-    def buy_packages(self, service_id_list, subscriber_number_list, threads):
+    def buy_packages(self, service_id_list, subscriber_number_list, platform_list, threads):
         def task():
             while self.loop:
                 data = self.package_queue.get()
@@ -447,12 +452,14 @@ class myxl(object):
                 self.log_replace(f"Rcv - {data['service_id']} ({data['subscriber_number']})")
                 self.package_queue.task_done()
 
-        for subscriber_number in subscriber_number_list:
-            for service_id in service_id_list:
-                self.package_queue.put({
-                    'service_id': str(service_id),
-                    'subscriber_number': str(subscriber_number),
-                })
+        for platform in platform_list:
+            for subscriber_number in subscriber_number_list:
+                for service_id in service_id_list:
+                    self.package_queue.put({
+                        'platform': f"{platform:0>2}",
+                        'service_id': str(service_id),
+                        'subscriber_number': str(subscriber_number),
+                    })
 
         self.package_queue_total = self.package_queue.qsize()
 
