@@ -434,9 +434,9 @@ class myxl(object):
             elif status == 'DUPLICATE':
                 self.log(f"Duplicate ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  Request to this package stopped \n", color='\033[33;2m')
 
-            elif response.get('responseCode') == '04':
+            elif response.get('responseCode') in ['04','21']:
                 if self.verbose:
-                    self.log(f"Not Match ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response} \n", color='\033[31;1m')
+                    self.log(f"Error ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response['message']} \n", color='\033[31;1m')
 
             else:
                 self.log(f"Response Error ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response} \n", color='\033[31;1m')
