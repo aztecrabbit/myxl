@@ -4,11 +4,13 @@ import src
 import json
 import argparse
 
+
 def realpath(file):
     return os.path.dirname(os.path.abspath(__file__)) + file
 
+
 def main():
-    parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=52))
+    parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=52))
     parser.add_argument('--verbose', help='increase output verbosity', dest='verbose', action='store_true')
     parser.add_argument('--signin', help='--signin 628xx', dest='msisdn', type=str)
     parser.add_argument('--buy', help='--buy 8210000-8219999', dest='service_id_range', type=str)
@@ -51,7 +53,7 @@ def main():
         while not myxl.is_signed_in():
             myxl.signin(arguments.msisdn, account_file=realpath('/account.json'))
 
-        if arguments.service_id_range:    
+        if arguments.service_id_range:
             service_id_range = []
             service_id_range.append(arguments.service_id_range[0])
             service_id_range.append(arguments.service_id_range[1] if len(arguments.service_id_range) >= 2 and int(arguments.service_id_range[1]) >= int(arguments.service_id_range[0]) else service_id_range[0])
@@ -64,10 +66,10 @@ def main():
             subscriber_number_list = []
 
             for service_id in range(int(service_id_range[0]), int(service_id_range[1]) + 1):
-                service_id_list.append(str(service_id))
+                service_id_list.append(service_id)
 
             for subscriber_number in range(int(subscriber_number_range[0]), int(subscriber_number_range[1]) + 1):
-                subscriber_number_list.append(str(subscriber_number)  + '00')
+                subscriber_number_list.append(f"{subscriber_number:0<10}")
 
             if arguments.subscriber_number_file:
                 if os.path.exists(realpath('/storage/subscriber_number.txt')):
@@ -97,6 +99,7 @@ def main():
         myxl.update_file(realpath('/storage/service_id.txt'))
         myxl.update_file(realpath('/storage/service_id_info.txt'))
         myxl.update_file(realpath('/storage/subscriber_number.txt'))
+
 
 if __name__ == '__main__':
     main()

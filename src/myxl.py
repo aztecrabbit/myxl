@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import json
 import queue
 import random
@@ -10,6 +9,7 @@ import threading
 
 lock = threading.RLock()
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
 
 class myxl(object):
     loop = True
@@ -78,7 +78,7 @@ class myxl(object):
                 terminal_columns = 512
 
             value = 'From {} to {} - {:.1f}% - {}'.format(self.package_queue_done, self.package_queue_total, (self.package_queue_done / (self.package_queue_total if self.package_queue_total else 1)) * 100, value)
-            value = value[:terminal_columns-3] + '...' if len(value) > terminal_columns else value
+            value = value[:terminal_columns - 3] + '...' if len(value) > terminal_columns else value
 
             if not self.loop:
                 return
@@ -105,7 +105,8 @@ class myxl(object):
             except requests.exceptions.ReadTimeout:
                 if not self.silent:
                     self.log_replace(f"Err - {target} (Read Timeout)")
-            else: break
+            else:
+                break
 
         return response
 
@@ -196,10 +197,10 @@ class myxl(object):
                 "Header": None,
                 "Body": {
                     "Header": {
-                      "ReqID": request_id,
+                        "ReqID": request_id,
                     },
                     "LoginSendOTPRq": {
-                      "msisdn": msisdn,
+                        "msisdn": msisdn,
                     }
                 },
                 "sessionId": None,
@@ -351,7 +352,6 @@ class myxl(object):
         else:
             self.log(f"Response Error ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response} \n", color='\033[31;1m')
 
-
     def buy_package(self, data):
         while self.loop:
             request_id = self.request_id()
@@ -434,7 +434,7 @@ class myxl(object):
             elif status == 'DUPLICATE':
                 self.log(f"Duplicate ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  Request to this package stopped \n", color='\033[33;2m')
 
-            elif response.get('responseCode') in ['04','21']:
+            elif response.get('responseCode') in ['04', '21']:
                 if self.verbose:
                     self.log(f"Error ({service_id}) ({subscriber_number}) ({platform}) \033[0m \n  {response['message']} \n", color='\033[31;1m')
 
