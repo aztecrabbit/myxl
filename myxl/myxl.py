@@ -229,7 +229,7 @@ class MyXL(multithreading.MultiThreadRequest):
 			response_json = response.json()
 			if response_json.get('LoginValidateOTPRs', {}).get('responseCode', '') != '00':
 				self.log(
-					''.join([
+					'\n'.join([
 						f'{R1}signin(){CC}',
 						f'  {response_json}',
 						'',
