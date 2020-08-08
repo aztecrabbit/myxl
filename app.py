@@ -77,7 +77,7 @@ def main():
 	)
 	parser.add_argument(
 		'--threads',
-		help='--threads 32',
+		help='--threads 8',
 		dest='threads',
 		type=int,
 		default=8,
