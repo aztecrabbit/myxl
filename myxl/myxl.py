@@ -19,6 +19,8 @@ class MyXL(multithreading.MultiThreadRequest):
 	default_priceplan = '513738114'
 	default_subscriber_number = None
 
+	file_name_success_list = 'data-event'
+
 	def __init__(self, task_list=None, threads=None, verbose=False):
 		super().__init__(task_list, threads=threads)
 		self.logger = multithreading.Logger(level='DEBUG' if verbose else 'INFO')
@@ -434,7 +436,3 @@ class MyXL(multithreading.MultiThreadRequest):
 				return True
 
 			return
-
-	def complete(self):
-		super().complete()
-		self.save_list_to_file('data-event.lst', self._task_success_event_list)
