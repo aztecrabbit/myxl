@@ -41,7 +41,7 @@ def get_account():
 			os.remove(account_file)
 
 
-def main():
+def get_arguments():
 	parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=52))
 	parser.add_argument(
 		'--verbose',
@@ -82,8 +82,12 @@ def main():
 		type=int,
 		default=8,
 	)
-	arguments = parser.parse_args()
 
+	return parser.parse_args()
+
+
+def main():
+	arguments = get_arguments()
 	account = get_account()
 
 	myxl = MyXL(threads=arguments.threads, verbose=arguments.verbose)
