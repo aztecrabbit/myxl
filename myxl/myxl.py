@@ -76,10 +76,7 @@ class MyXL(multithreading.MultiThreadRequest):
 			'DNT': '1',
 		}
 
-		if not isinstance(headers, dict):
-			headers = {}
-
-		return {**default_headers, **headers}
+		return self.dict_merge(default_headers, headers)
 
 	def get_content(self, content=None):
 		request_id = self.get_request_id()
@@ -107,10 +104,7 @@ class MyXL(multithreading.MultiThreadRequest):
 			'screenName': 'home.dashboard',
 		}
 
-		if not isinstance(content, dict):
-			content = {}
-
-		return {**default_content, **content}
+		return self.dict_merge(default_content, content)
 
 	def get_default_subscriber_number(self):
 		content = {
