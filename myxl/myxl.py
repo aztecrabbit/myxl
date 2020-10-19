@@ -155,9 +155,9 @@ class MyXL(multithreading.MultiThreadRequest):
 			W1 = self.logger.special_chars['W1']
 
 			self.log('\n'.join([
-				f'{W1}{user_info}{CC}',
+				f"{W1}{user_info}{CC}",
 				f"  Sesion Id: {response_json['sessionId']}",
-				'',
+				f"",
 			]))
 
 			self.default_subscriber_number = self.get_default_subscriber_number()
@@ -234,7 +234,7 @@ class MyXL(multithreading.MultiThreadRequest):
 					'\n'.join([
 						f'{R1}signin(){CC}',
 						f'  {response_json}',
-						'',
+						f'',
 					]),
 					level='CRITICAL',
 				)
@@ -289,7 +289,7 @@ class MyXL(multithreading.MultiThreadRequest):
 					'\n'.join([
 						f'{R1}get_package_info(){CC}',
 						f'  {response_json}',
-						'',
+						f'',
 					]),
 					level='CRITICAL',
 				)
@@ -415,9 +415,9 @@ class MyXL(multithreading.MultiThreadRequest):
 			elif response_json.get('responseCode') in ['04', '21']:
 				self.log(
 					'\n'.join([
-						f'{R1}{status_info}{CC}',
+						f"{R1}{status_info}{CC}",
 						f"  {response_json['message']}",
-						'',
+						f"",
 					]),
 					level='DEBUG',
 				)
