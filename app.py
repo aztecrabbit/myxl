@@ -90,9 +90,10 @@ def main():
 	arguments = get_arguments()
 	account = get_account()
 
-	myxl = MyXL(threads=arguments.threads, verbose=arguments.verbose)
+	myxl = MyXL(verbose=arguments.verbose)
 	myxl.msisdn = account.get('msisdn')
 	myxl.session_id = account.get('session_id')
+	myxl.set_threads(arguments.threads)
 	myxl.start_threads()
 
 	try:
