@@ -2,7 +2,7 @@ import datetime
 import json
 import random
 
-import multithreading
+import threading
 import requests
 
 
